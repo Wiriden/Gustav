@@ -1,7 +1,7 @@
 # Project Status - Svenssons Bygg AB Platform
 ## Date: 2025-03-07
 ### Current Progress
-- **Gantt Module:** Initial UI design complete, dependency logic in progress (50%).
+- **Gantt Module:** Grundläggande komponent skapad (55%).
 - **Meeting Manager:** Database schema defined, agenda UI started (30%).
 - **Resource Planner:** Employee data model in progress, workload calc pending (20%).
 - **Manöverpanel:** Integration with tasks planned (10%).
