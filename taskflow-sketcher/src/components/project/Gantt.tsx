@@ -53,6 +53,44 @@ const Gantt = ({ projectId }: GanttProps) => {
     };
 
     fetchTasks();
+
+    // Skapa en realtidskanal för att lyssna på ändringar i tasks-tabellen
+    const channel = supabase
+      .channel('tasks-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        (payload) => {
+          console.log('Realtime update:', payload);
+          
+          // Hantera INSERT-händelser
+          if (payload.eventType === 'INSERT') {
+            setTasks((prev) => [...prev, payload.new as Task]);
+          }
+          
+          // Hantera UPDATE-händelser
+          if (payload.eventType === 'UPDATE') {
+            setTasks((prev) => 
+              prev.map((task) => 
+                task.id === payload.new.id ? payload.new as Task : task
+              )
+            );
+          }
+          
+          // Hantera DELETE-händelser
+          if (payload.eventType === 'DELETE') {
+            setTasks((prev) => 
+              prev.filter((task) => task.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup-funktion för att ta bort kanalen vid unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Funktion för att växla ÄTA-status för en uppgift
@@ -315,6 +353,20 @@ const Gantt = ({ projectId }: GanttProps) => {
       .text('ÄTA-arbete')
       .attr('fill', '#FFFFFF')
       .attr('font-size', '12px');
+
+    // Realtidsuppdateringar
+    legend.append('circle')
+      .attr('cx', 5)
+      .attr('cy', 45)
+      .attr('r', 5)
+      .attr('fill', '#2ECC71');
+    
+    legend.append('text')
+      .attr('x', 25)
+      .attr('y', 48)
+      .text('Realtid aktiv')
+      .attr('fill', '#FFFFFF')
+      .attr('font-size', '12px');
   }, [tasks, expanded, criticalPath]);
 
   // Beräkna tidslinje-skala
@@ -360,7 +412,7 @@ const Gantt = ({ projectId }: GanttProps) => {
 
   return (
     <div className="p-4 bg-[#1E2A44] rounded-lg">
-      <h2 className="text-xl text-[#3498DB] mb-4">Gantt-diagram</h2>
+      <h2 className="text-xl text-[#3498DB] mb-4">Gantt-diagram <span className="text-[#2ECC71] text-sm">(Realtid)</span></h2>
       {error && <p className="text-[#E74C3C] mb-2">{error}</p>}
       <div className="mb-2">
         <span className="text-white">Kritiska vägar: </span>
