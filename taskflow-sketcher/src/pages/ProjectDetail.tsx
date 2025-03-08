@@ -6,7 +6,7 @@ import DocumentList from "@/components/project/DocumentList";
 import Gantt from "@/components/project/Gantt";
 import ProjectHeader from "@/components/project/ProjectHeader";
 import ProjectTabs from "@/components/project/ProjectTabs";
-import TaskList from "@/components/project/TaskList";
+import TaskManager from "@/components/project/TaskManager";
 import Timeline from "@/components/project/Timeline";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -90,7 +90,7 @@ const ProjectDetail = () => {
             
             {/* Tab content based on active tab */}
             <div className="p-6">
-              {activeTab === 'tasks' && <TaskList projectId={id} />}
+              {activeTab === 'tasks' && <TaskManager projectId={id} />}
               {activeTab === 'planering' && (
                 <div className="space-y-6">
                   <div className={isGanttExpanded ? 'w-full h-[80vh]' : 'w-full h-[300px]'}>
