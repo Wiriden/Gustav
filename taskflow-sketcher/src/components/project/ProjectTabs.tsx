@@ -1,7 +1,6 @@
-
 import { cn } from "@/lib/utils";
 
-type TabType = 'tasks' | 'timeline' | 'communication' | 'documents';
+type TabType = 'tasks' | 'planering' | 'communication' | 'documents';
 
 interface ProjectTabsProps {
   activeTab: TabType;
@@ -11,7 +10,7 @@ interface ProjectTabsProps {
 const ProjectTabs = ({ activeTab, onTabChange }: ProjectTabsProps) => {
   const tabs = [
     { id: 'tasks', name: 'Uppgifter' },
-    { id: 'timeline', name: 'Tidslinje' },
+    { id: 'planering', name: 'Planering' },
     { id: 'communication', name: 'Kommunikation' },
     { id: 'documents', name: 'Dokument' }
   ] as const;

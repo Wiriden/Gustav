@@ -54,4 +54,16 @@
 ## 2025-03-08 04:30 PST
 - Issue: Fas 4 behövde slutföras.
 - Action: Verifierade att alla realtidsfunktioner fungerar korrekt och uppdaterade dokumentation.
-- Result: Fas 4: Realtidsuppdateringar implementerade och testade framgångsrikt. 
+- Result: Fas 4: Realtidsuppdateringar implementerade och testade framgångsrikt.
+## 2025-03-08 05:00 PST
+- Issue: Fliken "Tidslinje" behövde döpas om till "Planering".
+- Action: Uppdaterade ProjectDetail.tsx och ProjectTabs.tsx.
+- Result: Fliken omdöpt och all funktionalitet bevarad.
+## 2025-03-08 05:15 PST
+- Issue: Gantt-schemat behövde integreras i projektvyn.
+- Action: Lade till Gantt-komponenten under "Planering"-fliken med expanderbar vy.
+- Result: Gantt visas nu i projektvyn och kan expanderas/kollapsas.
+## 2025-03-08 05:30 PST
+- Issue: Behövde säkerställa att Manöverpanelen är fristående.
+- Action: Verifierade att StatusWidget.tsx inte har beroenden till Gantt-komponenten.
+- Result: Manöverpanelen är fristående och redo för realtidsintegrering. 
