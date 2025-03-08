@@ -1,0 +1,16 @@
+
+/* Center task cards */
+.task-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  gap: 20px !important;
+  padding: 24px !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .task-grid {
+    padding: 16px !important;
+  }
+}

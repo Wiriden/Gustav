@@ -1,0 +1,177 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 219 40% 19%;
+    --foreground: 192 15% 94%;
+
+    --card: 218 23% 29%;
+    --card-foreground: 192 15% 94%;
+
+    --popover: 218 23% 29%;
+    --popover-foreground: 192 15% 94%;
+
+    --primary: 204 70% 53%;
+    --primary-foreground: 192 15% 94%;
+
+    --secondary: 218 23% 29%;
+    --secondary-foreground: 192 15% 94%;
+
+    --muted: 218 23% 29%;
+    --muted-foreground: 204 8% 76%;
+
+    --accent: 218 23% 29%;
+    --accent-foreground: 192 15% 94%;
+
+    --destructive: 6 78% 57%;
+    --destructive-foreground: 192 15% 94%;
+
+    --border: 217 22% 36%;
+    --input: 217 22% 36%;
+    --ring: 204 70% 53%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 219 40% 19%;
+    --sidebar-foreground: 192 15% 94%;
+    --sidebar-primary: 204 70% 53%;
+    --sidebar-primary-foreground: 192 15% 94%;
+    --sidebar-accent: 218 23% 29%;
+    --sidebar-accent-foreground: 192 15% 94%;
+    --sidebar-border: 217 22% 36%;
+    --sidebar-ring: 204 70% 53%;
+    
+    --status-planning: 29 89% 67%;
+    --status-construction: 145 63% 49%;
+    --status-completed: 145 63% 49%;
+    --status-urgent: 6 78% 57%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Glass-morphism and card styles */
+.glass {
+  background: rgba(30, 30, 30, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Hover effects */
+.hover-scale {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Task status indicators */
+.status-indicator {
+  width: 8px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+}
+
+/* Progress circles */
+.progress-circle {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Page transitions */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.page-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, #3498DB 0%, #2ECC71 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #E74C3C 0%, #F4A261 100%);
+}
+
+.card-gradient {
+  background: linear-gradient(180deg, rgba(52, 73, 94, 0.7) 0%, rgba(46, 64, 87, 0.9) 100%);
+  border: 1px solid rgba(70, 92, 113, 0.5);
+}
+
+/* Neo-morphism effect for cards */
+.neo-card {
+  background: #34495E;
+  border: 1px solid #465C71;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.neo-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-4px);
+}
+
+/* Header gradient */
+.header-gradient {
+  background: linear-gradient(90deg, #2E4057 0%, #4682B4 100%);
+}
+
