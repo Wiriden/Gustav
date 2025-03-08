@@ -1,0 +1,19 @@
+graph TD
+    A[Frontend - React Application] --> B[Supabase Backend]
+    B --> C[Tasks Table: id, project_id, title, start_date, end_date, dependencies, progress]
+    B --> D[Meetings Table: id, project_id, date, attendees, agenda, minutes]
+    B --> E[Employees Table: id, name, availability, allocations]
+    F[Gantt Module: Interactive Diagram with Dependencies and CPM] --> A
+    G[Meeting Manager: Scheduling, Agendas, Protocols] --> A
+    H[Resource Planner: Workload Visualization, Allocation] --> A
+    I[Manöverpanel: Task Overview, Notifications] --> A
+    J[Authentication Module: JWT, RBAC, Multi-tenant] --> B
+    K[API Layer: REST, WebSocket for Real-time Updates] --> B
+    L[Data Layer: Pagination, Caching with Redis] --> B
+    M[Insights Module: Reports, Analytics] --> A
+    N[User Interface: Responsive Design, #1E2A44/#3498DB Theme] --> A
+    O[Legal Compliance: GDPR, ToS] --> B
+    P[External Integrations: Fortnox for Billing] --> B
+    A --> Q[Cursor AI: Grok 3 & Claude 3.7 Development]
+    R[Separation of Concerns: Modular Components] --> A
+    S[Error Handling: Centralized Logging] --> B 
