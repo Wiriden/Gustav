@@ -1,31 +1,22 @@
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/lib/supabase';
-import {
-    AlertTriangle,
-    Calendar,
-    ChevronDown,
-    ChevronRight,
-    Users
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import * as d3 from 'd3';
+import { AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
  * Interface för en uppgift i Gantt-diagrammet
  * Följer Tasks Table-schemat från architecture.mermaid
  */
 interface Task {
-  id: string;
-  project_id: string;
+  id: number;
+  project_id: number;
+  company_id: number;
   title: string;
-  description?: string;
   start_date: string;
   end_date: string;
-  dependencies?: string[];
   progress: number;
-  assignee?: string;
-  is_ata?: boolean; // ÄTA-arbete enligt technical.md
+  dependencies: number[] | null;
+  is_ata: boolean;
 }
 
 /**
@@ -42,67 +33,289 @@ interface GanttProps {
  * @param projectId - ID för projektet att visa uppgifter för
  */
 const Gantt = ({ projectId }: GanttProps) => {
-  // State för uppgifter och pagination
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [criticalPath, setCriticalPath] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState<number>(1);
-  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Hämta uppgifter från Supabase med pagination
   useEffect(() => {
     const fetchTasks = async () => {
-      setLoading(true);
-      try {
-        // Använd Repository Pattern enligt technical.md
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('project_id', projectId || '')
-          .range((page - 1) * 100, page * 100 - 1); // Pagination enligt technical.md (100 tasks/page)
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Om vi inte har data från Supabase än, använd mockdata
-        if (!data || data.length === 0) {
-          // Mockdata för testning
-          const mockTasks: Task[] = Array.from({ length: 10 }, (_, i) => ({
-            id: `task-${i + 1}`,
-            project_id: projectId || 'project-1',
-            title: `Uppgift ${i + 1}`,
-            description: `Beskrivning för uppgift ${i + 1}`,
-            start_date: new Date(2025, 3, i + 1).toISOString(),
-            end_date: new Date(2025, 3, i + 10).toISOString(),
-            dependencies: i > 0 ? [`task-${i}`] : undefined,
-            progress: Math.floor(Math.random() * 100),
-            assignee: `Person ${i % 3 + 1}`,
-            is_ata: i % 5 === 0 // Var femte uppgift är ett ÄTA-arbete
-          }));
-          setTasks(mockTasks);
-        } else {
-          setTasks(data);
-        }
-      } catch (err) {
-        console.error('Error fetching tasks:', err);
-        setError(err instanceof Error ? err.message : 'Ett fel uppstod vid hämtning av uppgifter');
-      } finally {
-        setLoading(false);
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .limit(100);
+      if (error) {
+        setError(error.message);
+        console.error('Error fetching tasks:', error);
+      } else {
+        setTasks(data || []);
       }
     };
 
     fetchTasks();
-  }, [projectId, page]);
+  }, []);
 
-  // Funktion för att toggla expandering av en uppgift
-  const toggleTaskExpansion = (taskId: string) => {
-    setExpandedTasks(prev => ({
-      ...prev,
-      [taskId]: !prev[taskId]
-    }));
+  // Funktion för att växla ÄTA-status för en uppgift
+  const toggleAta = async (taskId: number, isAta: boolean) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ is_ata: !isAta })
+      .eq('id', taskId);
+    if (error) {
+      setError(error.message);
+      console.error('Error updating ÄTA:', error);
+    } else {
+      setTasks(tasks.map(task => task.id === taskId ? { ...task, is_ata: !isAta } : task));
+    }
   };
+
+  // Beräkna kritiska vägar med Critical Path Method (CPM)
+  useEffect(() => {
+    if (tasks.length === 0) return;
+    
+    // Beräkna duration för varje uppgift i dagar
+    const calculateDuration = (task: Task) => {
+      const startDate = new Date(task.start_date);
+      const endDate = new Date(task.end_date);
+      return Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+    };
+    
+    // Skapa en graf av uppgifter och deras beroenden
+    const taskMap: { [key: number]: Task } = {};
+    tasks.forEach(task => {
+      taskMap[task.id] = task;
+    });
+    
+    // Beräkna earliest start/finish och latest start/finish för varje uppgift
+    const durations: { [key: number]: number } = {};
+    const earliestStart: { [key: number]: number } = {};
+    const earliestFinish: { [key: number]: number } = {};
+    const latestStart: { [key: number]: number } = {};
+    const latestFinish: { [key: number]: number } = {};
+    
+    // Initialisera värden
+    tasks.forEach(task => {
+      durations[task.id] = calculateDuration(task);
+      earliestStart[task.id] = 0;
+      earliestFinish[task.id] = durations[task.id];
+    });
+    
+    // Framåtpass - beräkna earliest start/finish
+    let changed = true;
+    while (changed) {
+      changed = false;
+      tasks.forEach(task => {
+        if (task.dependencies && task.dependencies.length > 0) {
+          let maxEarliestFinish = 0;
+          task.dependencies.forEach(depId => {
+            if (earliestFinish[depId] > maxEarliestFinish) {
+              maxEarliestFinish = earliestFinish[depId];
+            }
+          });
+          
+          if (maxEarliestFinish > 0 && earliestStart[task.id] !== maxEarliestFinish) {
+            earliestStart[task.id] = maxEarliestFinish;
+            earliestFinish[task.id] = maxEarliestFinish + durations[task.id];
+            changed = true;
+          }
+        }
+      });
+    }
+    
+    // Hitta projektets sluttid (max earliest finish)
+    const projectEnd = Math.max(...Object.values(earliestFinish));
+    
+    // Initialisera latest finish till projektets sluttid
+    tasks.forEach(task => {
+      latestFinish[task.id] = projectEnd;
+      latestStart[task.id] = projectEnd - durations[task.id];
+    });
+    
+    // Bakåtpass - beräkna latest start/finish
+    changed = true;
+    while (changed) {
+      changed = false;
+      // Gå igenom uppgifterna i omvänd ordning
+      [...tasks].reverse().forEach(task => {
+        // Hitta alla uppgifter som beror på denna uppgift
+        const dependents = tasks.filter(t => 
+          t.dependencies && t.dependencies.includes(task.id)
+        );
+        
+        if (dependents.length > 0) {
+          let minLatestStart = Number.MAX_SAFE_INTEGER;
+          dependents.forEach(dep => {
+            if (latestStart[dep.id] < minLatestStart) {
+              minLatestStart = latestStart[dep.id];
+            }
+          });
+          
+          if (minLatestStart < Number.MAX_SAFE_INTEGER && latestFinish[task.id] !== minLatestStart) {
+            latestFinish[task.id] = minLatestStart;
+            latestStart[task.id] = minLatestStart - durations[task.id];
+            changed = true;
+          }
+        }
+      });
+    }
+    
+    // Beräkna slack för varje uppgift och identifiera kritiska vägar (slack = 0)
+    const criticalTasks: number[] = [];
+    tasks.forEach(task => {
+      const slack = latestStart[task.id] - earliestStart[task.id];
+      if (Math.abs(slack) < 0.001) {
+        criticalTasks.push(task.id);
+      }
+    });
+    
+    setCriticalPath(criticalTasks);
+  }, [tasks]);
+
+  useEffect(() => {
+    if (tasks.length === 0) return;
+
+    const width = 800;
+    const height = tasks.length * 40 + 50;
+    const svg = d3.select('#gantt-chart')
+      .attr('width', width)
+      .attr('height', height);
+
+    svg.selectAll('*').remove();
+
+    const xScale = d3.scaleTime()
+      .domain([
+        d3.min(tasks, d => new Date(d.start_date))!,
+        d3.max(tasks, d => new Date(d.end_date))!
+      ])
+      .range([0, width - 150]);
+
+    // Rita uppgifter
+    svg.selectAll('rect')
+      .data(tasks)
+      .enter()
+      .append('rect')
+      .attr('x', d => xScale(new Date(d.start_date)) + 100)
+      .attr('y', (d, i) => i * 40 + 30)
+      .attr('width', d => xScale(new Date(d.end_date)) - xScale(new Date(d.start_date)))
+      .attr('height', 20)
+      .attr('fill', d => criticalPath.includes(d.id) ? '#E74C3C' : '#3498DB')
+      .attr('class', 'transition-all duration-300 cursor-pointer')
+      .on('click', (event, d) => setExpanded(expanded === d.id ? null : d.id));
+
+    // Rita uppgiftsetiketter
+    svg.selectAll('text.task-label')
+      .data(tasks)
+      .enter()
+      .append('text')
+      .attr('class', 'task-label')
+      .attr('x', 10)
+      .attr('y', (d, i) => i * 40 + 45)
+      .text(d => d.title + (criticalPath.includes(d.id) ? ' (Kritisk)' : '') + (d.is_ata ? ' (ÄTA)' : ''))
+      .attr('fill', '#FFFFFF');
+
+    // Rita ÄTA-ikoner
+    svg.selectAll('g.ata-icon')
+      .data(tasks.filter(task => task.is_ata))
+      .enter()
+      .append('g')
+      .attr('class', 'ata-icon')
+      .attr('transform', (d, i) => {
+        const taskIndex = tasks.findIndex(t => t.id === d.id);
+        return `translate(${xScale(new Date(d.start_date)) + 80}, ${taskIndex * 40 + 30})`;
+      })
+      .append('path')
+      .attr('d', 'M0 0 L10 5 L0 10 Z')
+      .attr('fill', '#F4A261')
+      .attr('class', 'transition-all duration-300');
+
+    // Lägg till pilmarkör för beroenden
+    svg.append('defs').append('marker')
+      .attr('id', 'arrow')
+      .attr('viewBox', '0 0 10 10')
+      .attr('refX', 5)
+      .attr('refY', 5)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto-start-reverse')
+      .append('path')
+      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+      .attr('fill', '#3498DB');
+
+    // Rita beroenden med pilar och etiketter
+    tasks.forEach((task, i) => {
+      if (task.dependencies && task.dependencies.length > 0) {
+        task.dependencies.forEach(depId => {
+          const depTask = tasks.find(t => t.id === depId);
+          if (depTask) {
+            const depIndex = tasks.indexOf(depTask);
+            const isCriticalDependency = criticalPath.includes(task.id) && criticalPath.includes(depId);
+            
+            const group = svg.append('g')
+              .attr('class', 'dependency-line')
+              .on('mouseover', function() {
+                d3.select(this).select('line').attr('stroke', '#E74C3C');
+                d3.select(this).select('text').attr('opacity', 1);
+              })
+              .on('mouseout', function() {
+                d3.select(this).select('line')
+                  .attr('stroke', isCriticalDependency ? '#E74C3C' : '#3498DB');
+                d3.select(this).select('text').attr('opacity', 0);
+              });
+
+            group.append('line')
+              .attr('x1', xScale(new Date(depTask.end_date)) + 100)
+              .attr('y1', depIndex * 40 + 40)
+              .attr('x2', xScale(new Date(task.start_date)) + 100)
+              .attr('y2', i * 40 + 40)
+              .attr('stroke', isCriticalDependency ? '#E74C3C' : '#3498DB')
+              .attr('stroke-width', isCriticalDependency ? 3 : 2)
+              .attr('marker-end', 'url(#arrow)')
+              .attr('class', 'transition-all duration-300');
+
+            group.append('text')
+              .attr('x', (xScale(new Date(depTask.end_date)) + xScale(new Date(task.start_date))) / 2 + 100)
+              .attr('y', (depIndex * 40 + i * 40) / 2 + 40)
+              .text(`Beroende av ${depTask.title}${isCriticalDependency ? ' (Kritisk)' : ''}`)
+              .attr('fill', '#FFFFFF')
+              .attr('opacity', 0)
+              .attr('class', 'transition-all duration-300');
+          }
+        });
+      }
+    });
+
+    // Lägg till förklaring för kritiska vägar och ÄTA
+    const legend = svg.append('g')
+      .attr('class', 'legend')
+      .attr('transform', `translate(${width - 140}, 10)`);
+    
+    // Kritisk väg
+    legend.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', 20)
+      .attr('height', 10)
+      .attr('fill', '#E74C3C');
+    
+    legend.append('text')
+      .attr('x', 25)
+      .attr('y', 10)
+      .text('Kritisk väg')
+      .attr('fill', '#FFFFFF')
+      .attr('font-size', '12px');
+    
+    // ÄTA
+    legend.append('path')
+      .attr('d', 'M0 20 L10 25 L0 30 Z')
+      .attr('fill', '#F4A261');
+    
+    legend.append('text')
+      .attr('x', 25)
+      .attr('y', 30)
+      .text('ÄTA-arbete')
+      .attr('fill', '#FFFFFF')
+      .attr('font-size', '12px');
+  }, [tasks, expanded, criticalPath]);
 
   // Beräkna tidslinje-skala
   const calculateTimeScale = () => {
@@ -146,188 +359,39 @@ const Gantt = ({ projectId }: GanttProps) => {
   };
 
   return (
-    <div className="p-4 bg-[#1E2A44] rounded-lg" ref={containerRef}>
-      <h2 className="text-xl font-semibold text-[#ECF0F1] mb-4">Gantt-diagram</h2>
-      
-      {error && (
-        <div className="bg-[#E74C3C]/20 border border-[#E74C3C] rounded-md p-3 mb-4">
-          <p className="text-[#E74C3C] flex items-center">
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            {error}
-          </p>
-        </div>
-      )}
-      
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3498DB]"></div>
-        </div>
-      ) : (
-        <div className="mt-4">
-          {/* Tidslinje-header */}
-          <div className="flex mb-2 pl-[250px] text-[#BDC3C7] text-xs">
-            {Array.from({ length: Math.min(30, totalDays) }).map((_, i) => {
-              const date = new Date(startDate);
-              date.setDate(date.getDate() + i);
-              return (
-                <div 
-                  key={i} 
-                  className="flex-shrink-0 w-8 text-center"
-                  style={{ width: `${100 / Math.min(30, totalDays)}%` }}
-                >
-                  {date.getDate()}
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Uppgifter */}
-          <div className="space-y-2">
-            {tasks.map(task => {
-              const { startPercent, widthPercent } = calculateTaskPosition(task);
-              const isExpanded = expandedTasks[task.id] || false;
-              
-              return (
-                <div 
-                  key={task.id} 
-                  className="bg-[#34495E] border border-[#465C71] rounded-md overflow-hidden transition-all duration-300"
-                >
-                  {/* Uppgiftsrad */}
-                  <div className="flex items-center p-3">
-                    <button 
-                      onClick={() => toggleTaskExpansion(task.id)}
-                      className="mr-2 text-[#3498DB] hover:text-[#2980B9] transition-transform duration-300"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="w-5 h-5" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5" />
-                      )}
-                    </button>
-                    
-                    <div className="w-[200px] mr-4">
-                      <div className="flex items-center">
-                        <span className="font-medium text-[#ECF0F1]">{task.title}</span>
-                        {task.is_ata && (
-                          <span className="ml-2 px-1.5 py-0.5 text-xs bg-[#F4A261] text-[#1E2A44] rounded">
-                            ÄTA
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-[#BDC3C7]">
-                        {task.assignee || 'Ej tilldelad'}
-                      </div>
-                    </div>
-                    
-                    <div className="flex-grow relative h-6">
-                      <div className="absolute top-0 left-0 h-full bg-[#465C71] rounded-sm w-full"></div>
-                      <div 
-                        className="absolute top-0 left-0 h-full bg-[#3498DB] rounded-sm transition-all duration-300"
-                        style={{ 
-                          left: `${startPercent}%`, 
-                          width: `${widthPercent}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  {/* Expanderad vy */}
-                  {isExpanded && (
-                    <div className="px-10 pb-3 pt-1 text-[#ECF0F1] transition-all duration-300">
-                      <Separator className="mb-3 bg-[#465C71]" />
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Detaljer</h4>
-                          <p className="text-sm text-[#BDC3C7] mb-2">{task.description || 'Ingen beskrivning'}</p>
-                          
-                          <div className="flex items-center text-xs text-[#BDC3C7] mb-1">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            <span>Start: {formatDate(task.start_date)}</span>
-                          </div>
-                          
-                          <div className="flex items-center text-xs text-[#BDC3C7] mb-1">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            <span>Slut: {formatDate(task.end_date)}</span>
-                          </div>
-                          
-                          <div className="flex items-center text-xs text-[#BDC3C7]">
-                            <Users className="w-3 h-3 mr-1" />
-                            <span>Tilldelad: {task.assignee || 'Ej tilldelad'}</span>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium mb-1">Framsteg</h4>
-                          <Progress value={task.progress} className="h-2 mb-1" />
-                          <p className="text-xs text-[#BDC3C7]">{task.progress}% färdigt</p>
-                          
-                          {task.dependencies && task.dependencies.length > 0 && (
-                            <div className="mt-3">
-                              <h4 className="text-sm font-medium mb-1">Beroenden</h4>
-                              <div className="text-xs text-[#BDC3C7]">
-                                {task.dependencies.map(depId => {
-                                  const depTask = tasks.find(t => t.id === depId);
-                                  return (
-                                    <div key={depId} className="mb-1">
-                                      {depTask ? depTask.title : depId}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end mt-3">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-xs mr-2 bg-transparent border-[#465C71] text-[#ECF0F1] hover:bg-[#465C71] hover:text-[#ECF0F1]"
-                        >
-                          Redigera
-                        </Button>
-                        <Button 
-                          size="sm"
-                          className="text-xs bg-[#3498DB] hover:bg-[#2980B9] text-white"
-                        >
-                          Uppdatera status
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Pagination */}
-          {tasks.length >= 100 && (
-            <div className="flex justify-between items-center mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="bg-transparent border-[#465C71] text-[#ECF0F1] hover:bg-[#465C71] hover:text-[#ECF0F1]"
+    <div className="p-4 bg-[#1E2A44] rounded-lg">
+      <h2 className="text-xl text-[#3498DB] mb-4">Gantt-diagram</h2>
+      {error && <p className="text-[#E74C3C] mb-2">{error}</p>}
+      <div className="mb-2">
+        <span className="text-white">Kritiska vägar: </span>
+        <span className="text-[#E74C3C]">{criticalPath.length} uppgifter</span>
+        <span className="text-white ml-4">ÄTA-arbeten: </span>
+        <span className="text-[#F4A261]">{tasks.filter(t => t.is_ata).length} uppgifter</span>
+      </div>
+      <svg id="gantt-chart" />
+      {tasks.map(task => (
+        expanded === task.id && (
+          <div key={task.id} className="mt-2 p-2 bg-[#2A3A5E] rounded transition-all duration-300">
+            <p>Start: {formatDate(task.start_date)}</p>
+            <p>Slut: {formatDate(task.end_date)}</p>
+            <p>Framsteg: {task.progress}%</p>
+            <p>Beroenden: {task.dependencies ? task.dependencies.map(depId => {
+              const depTask = tasks.find(t => t.id === depId);
+              return depTask ? depTask.title : depId;
+            }).join(', ') : 'Inga'}</p>
+            <p>Kritisk väg: <span className={criticalPath.includes(task.id) ? 'text-[#E74C3C]' : ''}>{criticalPath.includes(task.id) ? 'Ja' : 'Nej'}</span></p>
+            <div className="flex items-center mt-2">
+              <AlertTriangle className={`mr-2 ${task.is_ata ? 'text-[#F4A261]' : 'text-gray-400'}`} />
+              <button
+                onClick={() => toggleAta(task.id, task.is_ata)}
+                className="text-[#3498DB] hover:underline"
               >
-                Föregående
-              </Button>
-              <span className="text-sm text-[#BDC3C7]">Sida {page}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => p + 1)}
-                disabled={tasks.length < 100}
-                className="bg-transparent border-[#465C71] text-[#ECF0F1] hover:bg-[#465C71] hover:text-[#ECF0F1]"
-              >
-                Nästa
-              </Button>
+                {task.is_ata ? 'Ta bort ÄTA' : 'Markera som ÄTA'}
+              </button>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )
+      ))}
     </div>
   );
 };

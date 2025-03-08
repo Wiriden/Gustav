@@ -18,4 +18,28 @@
 ## 2025-03-08 02:30 PST
 - Issue: Gantt component rendering pending.
 - Action: Created Gantt.tsx with expandable tasks and pagination.
-- Result: Successfully renders tasks, needs dependency logic and CPM implementation. 
+- Result: Successfully renders tasks, needs dependency logic and CPM implementation.
+## 2025-03-08 02:00 PST
+- Issue: Gantt interaktion saknades.
+- Action: Added expand/collapse functionality with animation.
+- Result: Successfully toggles task details.
+## 2025-03-08 02:15 PST
+- Issue: Gantt rendering with mockdata pending.
+- Action: Added 5 mock tasks in Supabase.
+- Result: Successfully displays tasks in Gantt.
+## 2025-03-08 03:00 PST
+- Issue: Beroendevisualisering saknades i Gantt.
+- Action: Implementerade interaktiva beroendelinjer med pilar och etiketter.
+- Result: Beroenden visas nu tydligt med hover-effekter och information.
+## 2025-03-08 03:15 PST
+- Issue: Kritiska vägar saknades i Gantt.
+- Action: Implementerade CPM-algoritm för att identifiera och markera kritiska vägar.
+- Result: Kritiska uppgifter och beroenden markeras nu med röd färg (#E74C3C) och etiketter.
+## 2025-03-08 03:30 PST
+- Issue: ÄTA-arbeten saknades i Gantt.
+- Action: Lade till is_ata-fält, ikon och växlingsfunktionalitet.
+- Result: Visar och hanterar nu ÄTA-uppgifter med orange triangel-markering (#F4A261).
+## 2025-03-08 03:45 PST
+- Issue: Avancerad Gantt-funktionalitet behövde testas.
+- Action: Testade beroenden, CPM och ÄTA-arbeten med mockdata.
+- Result: Alla avancerade funktioner fungerar som förväntat. 

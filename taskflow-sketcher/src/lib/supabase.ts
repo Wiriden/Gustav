@@ -1,13 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Hämta miljövariabler för Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-// Kontrollera att miljövariablerna är satta
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase URL eller Anon Key saknas. Kontrollera dina miljövariabler.');
-}
+const supabaseUrl = 'https://ihzaajimmaytorupdyvc.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloemFhamltbWF5dG9ydXBkeXZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzOTQzODIsImV4cCI6MjA1Njk3MDM4Mn0.yLiSEqoYMqtpLn4HHkxkHhmXzPmA3AGyungZKXgKfTI';
 
 // Skapa och exportera Supabase-klienten
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -21,9 +16,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  * Supabase-klient för att interagera med Supabase-backend
  * 
  * Använder Repository Pattern enligt technical.md
- * Konfigurerad med miljövariabler:
- * - VITE_SUPABASE_URL: URL till Supabase-projektet
- * - VITE_SUPABASE_ANON_KEY: Anonym API-nyckel för Supabase
+ * Konfigurerad med direkta värden:
+ * - URL: https://ihzaajimmaytorupdyvc.supabase.co
+ * - Anon Key: JWT-token för anonym åtkomst
  * 
  * @example
  * // Hämta uppgifter från tasks-tabellen
