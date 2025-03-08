@@ -46,4 +46,8 @@
 ## 2025-03-08 04:00 PST
 - Issue: Realtidsuppdateringar saknades i Gantt.
 - Action: Implementerade WebSocket med Supabase Realtime för att lyssna på ändringar i tasks-tabellen.
-- Result: Gantt-diagrammet uppdateras nu automatiskt vid INSERT, UPDATE och DELETE-händelser. 
+- Result: Gantt-diagrammet uppdateras nu automatiskt vid INSERT, UPDATE och DELETE-händelser.
+## 2025-03-08 04:15 PST
+- Issue: Realtidsuppdateringar behövde testas med flera användare.
+- Action: Testade med två webbläsarfönster och uppdaterade uppgifter via SQL.
+- Result: Ändringar i ett fönster reflekterades omedelbart i det andra fönstret. 
