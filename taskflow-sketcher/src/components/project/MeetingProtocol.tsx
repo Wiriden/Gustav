@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from '@/lib/supabase';
 import { cn } from "@/lib/utils";
-import { Dialog, Transition } from '@headlessui/react';
+import * as Headless from '@headlessui/react';
 import {
     Calendar,
     ChevronDown,
@@ -18,7 +18,7 @@ import {
     Users,
     X
 } from 'lucide-react';
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface MeetingProtocolProps {
   projectId?: string;
@@ -460,10 +460,9 @@ const MeetingProtocol: React.FC<MeetingProtocolProps> = ({ projectId }) => {
       )}
       
       {/* Modal för att lägga till/redigera möte */}
-      <Transition appear show={isModalOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={closeModal}>
-          <Transition.Child
-            as={Fragment}
+      <Headless.Transition appear show={isModalOpen}>
+        <Headless.Dialog className="relative z-50" onClose={closeModal}>
+          <Headless.Transition.Child
             enter="ease-out duration-300"
             enterFrom="opacity-0"
             enterTo="opacity-100"
@@ -472,12 +471,11 @@ const MeetingProtocol: React.FC<MeetingProtocolProps> = ({ projectId }) => {
             leaveTo="opacity-0"
           >
             <div className="fixed inset-0 bg-black/75" />
-          </Transition.Child>
-
+          </Headless.Transition.Child>
+          
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4">
-              <Transition.Child
-                as={Fragment}
+              <Headless.Transition.Child
                 enter="ease-out duration-300"
                 enterFrom="opacity-0 scale-95"
                 enterTo="opacity-100 scale-100"
@@ -485,11 +483,11 @@ const MeetingProtocol: React.FC<MeetingProtocolProps> = ({ projectId }) => {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-lg bg-[#1E2A44] p-6 align-middle shadow-xl transition-all">
+                <Headless.Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-lg bg-[#1E2A44] p-6 align-middle shadow-xl transition-all">
                   <div className="flex justify-between items-center mb-4">
-                    <Dialog.Title as="h3" className="text-lg font-medium text-[#ECF0F1]">
+                    <Headless.Dialog.Title className="text-lg font-medium text-[#ECF0F1]">
                       {editingMeeting ? 'Redigera protokoll' : 'Nytt mötesprotokoll'}
-                    </Dialog.Title>
+                    </Headless.Dialog.Title>
                     <button onClick={closeModal} className="text-[#BDC3C7] hover:text-[#ECF0F1]">
                       <X size={18} />
                     </button>
@@ -687,12 +685,12 @@ const MeetingProtocol: React.FC<MeetingProtocolProps> = ({ projectId }) => {
                       <span>{editingMeeting ? 'Uppdatera' : 'Spara'}</span>
                     </Button>
                   </div>
-                </Dialog.Panel>
-              </Transition.Child>
+                </Headless.Dialog.Panel>
+              </Headless.Transition.Child>
             </div>
           </div>
-        </Dialog>
-      </Transition>
+        </Headless.Dialog>
+      </Headless.Transition>
     </div>
   );
 };
